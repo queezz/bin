@@ -23,7 +23,7 @@ let defaultCameraPosition = new THREE.Vector3(120, -120, 120);
 let defaultControlsTarget = new THREE.Vector3(0, 0, 0);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b0d12);
+scene.background = new THREE.Color(0x7c8c8f);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 10000);
 camera.position.copy(defaultCameraPosition);
@@ -37,7 +37,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.screenSpacePanning = true;
-controls.maxPolarAngle = Math.PI / 2;
+controls.maxPolarAngle = Math.PI * 0.95; 
 controls.minDistance = 10;
 controls.maxDistance = 1000;
 controls.target.copy(defaultControlsTarget);
@@ -54,8 +54,8 @@ grid.material.opacity = 0.4;
 grid.material.transparent = true;
 scene.add(grid);
 
-const axesHelper = new THREE.AxesHelper(50);
-scene.add(axesHelper);
+// const axesHelper = new THREE.AxesHelper(50);
+// scene.add(axesHelper);
 
 const loader = new STLLoader();
 
@@ -101,23 +101,31 @@ function placeObjectOnGrid(object) {
  * @param {OrbitControls} controls
  * @param {number} offset
  */
-function fitCameraToObject(camera, object, controls, offset = 1.25) {
+function fitCameraToObject(camera, object, controls, offset = 0) {
+
   const box = new THREE.Box3().setFromObject(object);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
 
   const maxDim = Math.max(size.x, size.y, size.z);
+
   const fov = camera.fov * (Math.PI / 180);
-  let cameraZ = Math.abs(maxDim / Math.tan(fov / 2));
-  cameraZ *= offset;
+  let distance = Math.abs(maxDim / Math.tan(fov / 2));
+  distance *= offset;
 
-  camera.position.set(center.x + cameraZ * 0.5, center.y + cameraZ * 0.5, center.z + cameraZ);
+  // set orbit center
+  controls.target.copy(center);
 
-  if (controls) {
-    controls.target.set(0, 0, size.z * 0.5);
-    camera.lookAt(controls.target);
-    controls.update();
-  }
+  // place camera diagonally relative to that center
+  camera.position.set(
+    center.x + distance,
+    center.y - distance,
+    center.z + distance
+  );
+
+  camera.lookAt(center);
+
+  controls.update();
 }
 
 function showGeometry(geometry) {
@@ -131,9 +139,9 @@ function showGeometry(geometry) {
   geometry.computeVertexNormals();
 
   const material = new THREE.MeshStandardMaterial({
-    color: 0x8aa4d6,
-    metalness: 0.1,
-    roughness: 0.6
+    color: 0xff834a,
+    metalness: 0.3,
+    roughness: 0.3
   });
 
   currentMesh = new THREE.Mesh(geometry, material);
@@ -147,7 +155,7 @@ function showGeometry(geometry) {
   const size = box.getSize(new THREE.Vector3());
   modelInfoEl.textContent = `Size: ${size.x.toFixed(1)} × ${size.y.toFixed(1)} × ${size.z.toFixed(1)} mm`;
 
-  fitCameraToObject(camera, currentMesh, controls, 1.25);
+  fitCameraToObject(camera, currentMesh, controls, 0.5);
   fitViewBtn.classList.add("hidden");
 }
 
