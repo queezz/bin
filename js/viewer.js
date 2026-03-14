@@ -67,11 +67,14 @@ function setStatus(text, level) {
 }
 
 function resize() {
-  const width = viewerEl.clientWidth || 800;
-  const height = viewerEl.clientHeight || 500;
+  const width = viewerEl.clientWidth;
+  const height = viewerEl.clientHeight;
+
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(width, height);
+
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
-  renderer.setSize(width, height);
 }
 
 function animate() {
@@ -101,7 +104,7 @@ function placeObjectOnGrid(object) {
  * @param {OrbitControls} controls
  * @param {number} offset
  */
-function fitCameraToObject(camera, object, controls, offset = 0) {
+function fitCameraToObject(camera, object, controls, offset = 0.6) {
 
   const box = new THREE.Box3().setFromObject(object);
   const size = box.getSize(new THREE.Vector3());
