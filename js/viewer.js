@@ -5,6 +5,20 @@ import { generateBin } from "./api.js";
 
 const viewerEl = document.getElementById("viewer");
 const apiBaseEl = document.getElementById("apiBase");
+
+const LOCAL_API = "http://localhost:8080";
+const CLOUD_API = "https://bin-generator-540296082924.asia-northeast1.run.app";
+
+function detectBackend() {
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") {
+    return LOCAL_API;
+  }
+  return CLOUD_API;
+}
+
+apiBaseEl.value = detectBackend();
+
 const xEl = document.getElementById("x");
 const yEl = document.getElementById("y");
 const hEl = document.getElementById("h");
