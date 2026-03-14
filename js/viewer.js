@@ -19,7 +19,7 @@ const modelInfoEl = document.getElementById("modelInfo");
 
 let objectUrl = null;
 let currentMesh = null;
-let defaultCameraPosition = new THREE.Vector3(140, 120, 160);
+let defaultCameraPosition = new THREE.Vector3(120, -120, 120);
 let defaultControlsTarget = new THREE.Vector3(0, 0, 0);
 
 const scene = new THREE.Scene();
@@ -27,6 +27,7 @@ scene.background = new THREE.Color(0x0b0d12);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 10000);
 camera.position.copy(defaultCameraPosition);
+camera.up.set(0, 0, 1);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -47,7 +48,10 @@ dirLight.position.set(80, 120, 100);
 scene.add(dirLight);
 
 const grid = new THREE.GridHelper(200, 20, 0x444444, 0x444444);
+grid.rotation.x = Math.PI / 2;
 grid.position.set(0, 0, 0);
+grid.material.opacity = 0.4;
+grid.material.transparent = true;
 scene.add(grid);
 
 const axesHelper = new THREE.AxesHelper(50);
@@ -77,13 +81,17 @@ function animate() {
 }
 
 /**
- * Centers the object at the origin using its bounding box.
+ * Places the object on the grid: centered in X/Y, bottom at Z=0.
  * @param {THREE.Object3D} object
  */
-function centerObject(object) {
+function placeObjectOnGrid(object) {
   const box = new THREE.Box3().setFromObject(object);
+  const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
-  object.position.sub(center);
+
+  object.position.x -= center.x;
+  object.position.y -= center.y;
+  object.position.z -= box.min.z;
 }
 
 /**
@@ -103,11 +111,11 @@ function fitCameraToObject(camera, object, controls, offset = 1.25) {
   let cameraZ = Math.abs(maxDim / Math.tan(fov / 2));
   cameraZ *= offset;
 
-  camera.position.set(center.x, center.y + cameraZ * 0.2, center.z + cameraZ);
-  camera.lookAt(center);
+  camera.position.set(center.x + cameraZ * 0.5, center.y + cameraZ * 0.5, center.z + cameraZ);
 
   if (controls) {
-    controls.target.copy(center);
+    controls.target.set(0, 0, size.z * 0.5);
+    camera.lookAt(controls.target);
     controls.update();
   }
 }
@@ -129,12 +137,11 @@ function showGeometry(geometry) {
   });
 
   currentMesh = new THREE.Mesh(geometry, material);
-  currentMesh.rotation.x = -Math.PI / 2; // CAD Z-up -> Three.js Y-up
   currentMesh.castShadow = false;
   currentMesh.receiveShadow = false;
   scene.add(currentMesh);
 
-  centerObject(currentMesh);
+  placeObjectOnGrid(currentMesh);
 
   const box = new THREE.Box3().setFromObject(currentMesh);
   const size = box.getSize(new THREE.Vector3());
