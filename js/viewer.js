@@ -52,8 +52,8 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.2;
 controls.screenSpacePanning = true;
 controls.maxPolarAngle = Math.PI * 0.95; 
-controls.minDistance = 30;
-controls.maxDistance = 300;
+controls.minDistance = 10;
+controls.maxDistance = 1000;
 controls.target.copy(defaultControlsTarget);
 
 // scene.add(new THREE.AmbientLight(0xffffff, 0.6));
