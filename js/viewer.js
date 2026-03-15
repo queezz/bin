@@ -44,6 +44,9 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 viewerEl.appendChild(renderer.domElement);
 
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.physicallyCorrectLights = true;
+
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.2;
@@ -53,10 +56,26 @@ controls.minDistance = 30;
 controls.maxDistance = 300;
 controls.target.copy(defaultControlsTarget);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-dirLight.position.set(80, 120, 100);
-scene.add(dirLight);
+// scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+// const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+// dirLight.position.set(80, 120, 100);
+//scene.add(dirLight);
+
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(ambientLight);
+
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.6);
+hemiLight.position.set(0, 20, 0);
+scene.add(hemiLight);
+
+const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight1.position.set(5, 10, 7);
+scene.add(dirLight1);
+
+const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+dirLight2.position.set(-5, -5, -5);
+scene.add(dirLight2);
 
 const grid = new THREE.GridHelper(200, 20, 0x444444, 0xd4ce28);
 grid.rotation.x = Math.PI / 2;
@@ -226,8 +245,8 @@ function showGeometry(geometry) {
 
   const material = new THREE.MeshStandardMaterial({
     color: 0xff834a,
-    metalness: 0.3,
-    roughness: 0.3
+    metalness: 0.1,
+    roughness: 1.3
   });
 
   currentMesh = new THREE.Mesh(geometry, material);
