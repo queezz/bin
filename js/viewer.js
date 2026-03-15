@@ -181,7 +181,6 @@ function showGeometry(geometry) {
   const size = box.getSize(new THREE.Vector3());
   modelInfoEl.textContent = `Size: ${size.x.toFixed(1)} × ${size.y.toFixed(1)} × ${size.z.toFixed(1)} mm`;
 
-  fitCameraToObject(camera, currentMesh, controls, 0.5);
   fitViewBtn.classList.add("hidden");
 }
 
@@ -214,7 +213,11 @@ async function generateAndPreview() {
     const arrayBuffer = await blob.arrayBuffer();
     const geometry = loader.parse(arrayBuffer);
     showGeometry(geometry);
-    
+
+    requestAnimationFrame(() => {
+      if (currentMesh) fitCameraToObject(camera, currentMesh, controls);
+    });
+
     downloadBtn.href = objectUrl;
     downloadBtn.download =
       "bin-" + xEl.value + "-" + yEl.value + "-" + hEl.value + ".stl";
