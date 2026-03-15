@@ -4,13 +4,15 @@
  * @param {number|string} x - X dimension (mm).
  * @param {number|string} y - Y dimension (mm).
  * @param {number|string} h - Height (mm).
+ * @param {boolean} ears - Whether to include ears.
  * @returns {Promise<Blob>} STL file blob.
  */
-export async function generateBin(baseUrl, x, y, h) {
+export async function generateBin(baseUrl, x, y, h, ears) {
   const url = new URL(baseUrl.replace(/\/+$/, "") + "/generate");
   url.searchParams.set("x", String(x));
   url.searchParams.set("y", String(y));
   url.searchParams.set("h", String(h));
+  url.searchParams.set("ears", String(ears));
   url.searchParams.set("name", "true");
 
   const response = await fetch(url.toString(), { method: "GET" });

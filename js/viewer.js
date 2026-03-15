@@ -22,6 +22,7 @@ apiBaseEl.value = detectBackend();
 const xEl = document.getElementById("x");
 const yEl = document.getElementById("y");
 const hEl = document.getElementById("h");
+const earsEl = document.getElementById("ears");
 const generateBtn = document.getElementById("generateBtn");
 const resetViewBtn = document.getElementById("resetViewBtn");
 const downloadBtn = document.getElementById("downloadBtn");
@@ -284,7 +285,7 @@ async function generateAndPreview() {
   const baseUrl = apiBaseEl.value.trim().replace(/\/+$/, "");
 
   try {
-    const blob = await generateBin(baseUrl, xEl.value, yEl.value, hEl.value);
+    const blob = await generateBin(baseUrl, xEl.value, yEl.value, hEl.value, earsEl.checked);
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(blob);
@@ -299,7 +300,7 @@ async function generateAndPreview() {
 
     downloadBtn.href = objectUrl;
     downloadBtn.download =
-      "bin-" + xEl.value + "-" + yEl.value + "-" + hEl.value + ".stl";
+      "bin-" + xEl.value + "-" + yEl.value + "-" + hEl.value + "-ears" + (earsEl.checked ? "1" : "0") + ".stl";
     downloadBtn.classList.remove("disabled");
 
     saveDimensions(xEl.value, yEl.value, hEl.value);
