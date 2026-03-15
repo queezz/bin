@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "https://unpkg.com/three@0.160.0/examples/jsm/loaders/STLLoader.js";
 import { generateBin } from "./api.js";
+import { getCached, setCached } from "./cache.js";
 
 const viewerEl = document.getElementById("viewer");
 const apiBaseEl = document.getElementById("apiBase");
@@ -283,9 +284,35 @@ async function generateAndPreview() {
   setStatus("Generating STL...", "warn");
 
   const baseUrl = apiBaseEl.value.trim().replace(/\/+$/, "");
+  const x = xEl.value;
+  const y = yEl.value;
+  const h = hEl.value;
+  const ears = earsEl.checked;
+  const cacheKey = `bin-${x}-${y}-${h}-ears${ears}`;
 
   try {
-    const blob = await generateBin(baseUrl, xEl.value, yEl.value, hEl.value, earsEl.checked);
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(cached);
+      const arrayBuffer = await cached.arrayBuffer();
+      const geometry = loader.parse(arrayBuffer);
+      showGeometry(geometry);
+      requestAnimationFrame(() => {
+        if (currentMesh) fitCameraToObject(camera, currentMesh, controls);
+      });
+      downloadBtn.href = objectUrl;
+      downloadBtn.download = "bin-" + x + "-" + y + "-" + h + "-ears" + (ears ? "1" : "0") + ".stl";
+      downloadBtn.classList.remove("disabled");
+      saveDimensions(x, y, h);
+      saveStl(arrayBuffer);
+      setStatus("Loaded from browser cache", "ok");
+      generateBtn.disabled = false;
+      return;
+    }
+
+    const blob = await generateBin(baseUrl, x, y, h, ears);
+    await setCached(cacheKey, blob);
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(blob);
@@ -300,10 +327,10 @@ async function generateAndPreview() {
 
     downloadBtn.href = objectUrl;
     downloadBtn.download =
-      "bin-" + xEl.value + "-" + yEl.value + "-" + hEl.value + "-ears" + (earsEl.checked ? "1" : "0") + ".stl";
+      "bin-" + x + "-" + y + "-" + h + "-ears" + (ears ? "1" : "0") + ".stl";
     downloadBtn.classList.remove("disabled");
 
-    saveDimensions(xEl.value, yEl.value, hEl.value);
+    saveDimensions(x, y, h);
     saveStl(arrayBuffer);
 
     setStatus("Model loaded.", "ok");
