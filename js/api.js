@@ -4,15 +4,14 @@
  * @param {number|string} x - X dimension (mm).
  * @param {number|string} y - Y dimension (mm).
  * @param {number|string} h - Height (mm).
- * @param {boolean} [cacheBust=false] - If true, appends _t for cache busting.
  * @returns {Promise<Blob>} STL file blob.
  */
-export async function generateBin(baseUrl, x, y, h, cacheBust = false) {
+export async function generateBin(baseUrl, x, y, h) {
   const url = new URL(baseUrl.replace(/\/+$/, "") + "/generate");
   url.searchParams.set("x", String(x));
   url.searchParams.set("y", String(y));
   url.searchParams.set("h", String(h));
-  if (cacheBust) url.searchParams.set("_t", String(Date.now()));
+  url.searchParams.set("name", "true");
 
   const response = await fetch(url.toString(), { method: "GET" });
   if (!response.ok) {

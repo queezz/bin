@@ -29,13 +29,12 @@
           <input id="h" type="number" step="1" min="1" value="30" />
         </div>
       </div>
-      <div class="checks">
-        <label class="check"><input id="name" type="checkbox" checked /> <span>Named STL file</span></label>
-        <label class="check"><input id="cacheBust" type="checkbox" checked /> <span>Cache bust</span></label>
-      </div>
-      <div class="btn-row">
-        <button id="generateBtn" class="primary">Generate</button>
-        <button id="resetViewBtn" type="button">Reset View</button>
+      <div class="controls-actions">
+        <div class="btn-row">
+          <button id="generateBtn" class="primary">Generate</button>
+          <button id="resetViewBtn" type="button">Reset View</button>
+        </div>
+        <div id="status" class="status status-inline">Ready.</div>
       </div>
     </section>
 
@@ -43,7 +42,7 @@
       <div id="viewer" class="viewer">
         <button id="fitViewBtn" type="button" class="fit-view hidden">Fit to view</button>
       </div>
-      <div class="viewer-hint">Mouse: rotate · Wheel: zoom · Right-drag: pan · Double-click: fit</div>
+      <!-- <div class="viewer-hint">Mouse: rotate · Wheel: zoom · Right-drag: pan · Double-click: fit</div> -->
       <div id="modelInfo" class="model-info">No model loaded</div>
     </div>
 
@@ -51,8 +50,6 @@
       <a id="downloadBtn" class="button-link disabled" href="#" download="bin.stl">Download STL</a>
     </section>
 
-    <div id="status" class="status">Ready.</div>
-    <div id="requestUrl" class="url-box">Request URL will appear here after Generate.</div>
   </div>
 
   <script type="importmap">

@@ -22,13 +22,10 @@ apiBaseEl.value = detectBackend();
 const xEl = document.getElementById("x");
 const yEl = document.getElementById("y");
 const hEl = document.getElementById("h");
-const nameEl = document.getElementById("name");
-const cacheBustEl = document.getElementById("cacheBust");
 const generateBtn = document.getElementById("generateBtn");
 const resetViewBtn = document.getElementById("resetViewBtn");
 const downloadBtn = document.getElementById("downloadBtn");
 const statusEl = document.getElementById("status");
-const requestUrlEl = document.getElementById("requestUrl");
 const modelInfoEl = document.getElementById("modelInfo");
 
 let objectUrl = null;
@@ -198,16 +195,9 @@ async function generateAndPreview() {
   setStatus("Generating STL...", "warn");
 
   const baseUrl = apiBaseEl.value.trim().replace(/\/+$/, "");
-  const url = new URL(baseUrl + "/generate");
-  url.searchParams.set("x", xEl.value);
-  url.searchParams.set("y", yEl.value);
-  url.searchParams.set("h", hEl.value);
-  if (nameEl.checked) url.searchParams.set("name", "true");
-  if (cacheBustEl.checked) url.searchParams.set("_t", String(Date.now()));
-  requestUrlEl.textContent = url.toString();
 
   try {
-    const blob = await generateBin(baseUrl, xEl.value, yEl.value, hEl.value, cacheBustEl.checked);
+    const blob = await generateBin(baseUrl, xEl.value, yEl.value, hEl.value);
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(blob);
@@ -217,9 +207,8 @@ async function generateAndPreview() {
     showGeometry(geometry);
     
     downloadBtn.href = objectUrl;
-    downloadBtn.download = nameEl.checked
-      ? "bin-" + xEl.value + "-" + yEl.value + "-" + hEl.value + ".stl"
-      : "bin.stl";
+    downloadBtn.download =
+      "bin-" + xEl.value + "-" + yEl.value + "-" + hEl.value + ".stl";
     downloadBtn.classList.remove("disabled");
 
     setStatus("Model loaded.", "ok");
