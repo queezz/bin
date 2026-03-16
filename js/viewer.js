@@ -36,7 +36,7 @@ let defaultCameraPosition = new THREE.Vector3(120, -120, 120);
 let defaultControlsTarget = new THREE.Vector3(0, 0, 0);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x7c8c8f);
+scene.background = new THREE.Color(0x24302b);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 10000);
 camera.position.copy(defaultCameraPosition);
@@ -64,22 +64,31 @@ controls.target.copy(defaultControlsTarget);
 //scene.add(dirLight);
 
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-scene.add(ambientLight);
+const ambient = new THREE.AmbientLight(0xffffff, 0.9);
+scene.add(ambient);
 
-const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.6);
-hemiLight.position.set(0, 20, 0);
-scene.add(hemiLight);
+const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+hemi.position.set(0,1,0);
+scene.add(hemi);
 
-const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
-dirLight1.position.set(5, 10, 7);
-scene.add(dirLight1);
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(2,3,2);
+scene.add(key);
 
-const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
-dirLight2.position.set(-5, -5, -5);
-scene.add(dirLight2);
+const fill = new THREE.DirectionalLight(0xffffff, 0.8);
+fill.position.set(-1,-1,-1);
+scene.add(fill);
 
-const grid = new THREE.GridHelper(200, 20, 0x444444, 0xd4ce28);
+const rim = new THREE.DirectionalLight(0xffffff, 2.5);
+rim.position.set(0,-2,2);
+scene.add(rim);
+
+const fill2 = new THREE.DirectionalLight(0x961fff, 1.8);
+fill2.position.set(-1, 2,-1);
+scene.add(fill2);
+
+
+const grid = new THREE.GridHelper(200, 20, 0xb00e5c, 0xd4ce28);
 grid.rotation.x = Math.PI / 2;
 grid.position.set(0, 0, 0);
 grid.material.opacity = 0.4;
@@ -87,6 +96,7 @@ grid.material.transparent = true;
 scene.add(grid);
 
 // const axesHelper = new THREE.AxesHelper(50);
+// axesHelper.position.set(10, -40, 0);
 // scene.add(axesHelper);
 
 const loader = new STLLoader();
@@ -246,9 +256,9 @@ function showGeometry(geometry) {
   geometry.computeVertexNormals();
 
   const material = new THREE.MeshStandardMaterial({
-    color: 0xff834a,
-    metalness: 0.1,
-    roughness: 1.3
+    color: 0x52b8f7,
+    metalness: 0.2,
+    roughness: 0.4
   });
 
   currentMesh = new THREE.Mesh(geometry, material);
