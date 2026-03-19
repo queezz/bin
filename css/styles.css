@@ -93,15 +93,62 @@ body {
   margin-bottom: 8px;
 }
 
-.howto-note {
-  margin: 0;
-  padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--muted);
+.howto-section {
+  margin-top: 28px;
+  margin-bottom: 8px;
+}
+
+.info-card {
+  background: rgb(27, 36, 38);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-top: 14px;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.info-card.warning {
+  border-left: 3px solid #f0570b;
+  background: rgb(32, 47, 47);
+}
+
+.info-label {
+  font-weight: 600;
+  color: #cfd8ff;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.info-card a {
+  color: #7ab7ff;
+  text-decoration: none;
+}
+
+.info-card a:hover {
+  text-decoration: underline;
+}
+
+.info-card .line {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.info-card .line:last-child {
+  margin-bottom: 0;
+}
+
+.info-card.primary {
+  border-left: 3px solid #ffd500;
+  background: linear-gradient(
+    90deg,
+    rgba(77, 163, 255, 0.08),
+    rgba(77, 163, 255, 0.02)
+  );
+}
+.info-card.primary ol {
+  margin-bottom: 6px;
 }
 
 .controls {
