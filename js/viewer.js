@@ -31,6 +31,14 @@ const resetViewBtn = document.getElementById("resetViewBtn");
 const downloadBtn = document.getElementById("downloadBtn");
 const statusEl = document.getElementById("status");
 const modelInfoEl = document.getElementById("modelInfo");
+const appUiEl = document.getElementById("app-ui");
+const contentEl = document.getElementById("content");
+const howtoTabEl = document.getElementById("howto-tab");
+const binTabEl = document.getElementById("bin-tab");
+const unitsEl = document.querySelector(".toolbar .units");
+
+/** @type {HTMLElement | null} */
+let howtoMainCachedClone = null;
 
 let objectUrl = null;
 let currentMesh = null;
@@ -182,6 +190,53 @@ function resize() {
 
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
+}
+
+function parseHowtoMainFromHtml(text) {
+  const doc = new DOMParser().parseFromString(text, "text/html");
+  return doc.querySelector("main.howto-content") || doc.querySelector("main");
+}
+
+async function loadHowTo() {
+  try {
+    let mainEl;
+    if (howtoMainCachedClone) {
+      mainEl = howtoMainCachedClone.cloneNode(true);
+    } else {
+      const response = await fetch("howto.html");
+      if (!response.ok) {
+        window.location.href = "howto.html";
+        return;
+      }
+      const text = await response.text();
+      const main = parseHowtoMainFromHtml(text);
+      if (!main) {
+        window.location.href = "howto.html";
+        return;
+      }
+      howtoMainCachedClone = main.cloneNode(true);
+      mainEl = main.cloneNode(true);
+    }
+    contentEl.replaceChildren(mainEl);
+    appUiEl.classList.add("hidden");
+    contentEl.classList.remove("hidden");
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    howtoTabEl.classList.add("active");
+    unitsEl?.classList.add("hidden");
+    window.scrollTo(0, 0);
+  } catch {
+    window.location.href = "howto.html";
+  }
+}
+
+function showBin() {
+  contentEl.replaceChildren();
+  contentEl.classList.add("hidden");
+  appUiEl.classList.remove("hidden");
+  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+  binTabEl.classList.add("active");
+  unitsEl?.classList.remove("hidden");
+  requestAnimationFrame(() => resize());
 }
 
 function animate() {
@@ -459,14 +514,21 @@ function restoreFromStorage() {
   }
 }
 
-document.querySelectorAll(".tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-    tab.classList.add("active");
-    const tool = tab.dataset.tool;
-    console.log("Selected tool:", tool);
-  });
+binTabEl.addEventListener("click", showBin);
+howtoTabEl.addEventListener("click", () => {
+  loadHowTo();
 });
+
+function preloadHowTo() {
+  if (howtoMainCachedClone) return;
+  fetch("howto.html")
+    .then((r) => (r.ok ? r.text() : Promise.reject()))
+    .then((text) => {
+      const main = parseHowtoMainFromHtml(text);
+      if (main) howtoMainCachedClone = main.cloneNode(true);
+    })
+    .catch(() => {});
+}
 
 generateBtn.addEventListener("click", generateAndPreview);
 resetViewBtn.addEventListener("click", resetView);
@@ -475,3 +537,9 @@ restoreFromStorage();
 window.addEventListener("resize", resize);
 resize();
 animate();
+
+if (typeof requestIdleCallback === "function") {
+  requestIdleCallback(() => preloadHowTo(), { timeout: 4000 });
+} else {
+  setTimeout(preloadHowTo, 1);
+}
