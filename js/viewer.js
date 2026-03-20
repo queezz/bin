@@ -18,7 +18,21 @@ function detectBackend() {
   return CLOUD_API;
 }
 
+function wakeBackend(baseUrl) {
+  const base = baseUrl.replace(/\/+$/, "");
+  fetch(`${base}/info`)
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((data) => {
+      if (data?.version) console.log(data.version);
+    })
+    .catch(() => {});
+}
+
 apiBaseEl.value = detectBackend();
+
+document.addEventListener("DOMContentLoaded", () => {
+  wakeBackend(apiBaseEl.value.trim().replace(/\/+$/, ""));
+});
 
 const xEl = document.getElementById("x");
 const yEl = document.getElementById("y");
