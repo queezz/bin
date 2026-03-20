@@ -23,6 +23,7 @@ apiBaseEl.value = detectBackend();
 const xEl = document.getElementById("x");
 const yEl = document.getElementById("y");
 const hEl = document.getElementById("h");
+const wallEl = document.getElementById("wall");
 const earsEl = document.getElementById("ears");
 const useRampEl = document.getElementById("useRamp");
 const generateBtn = document.getElementById("generateBtn");
@@ -106,14 +107,16 @@ const STORAGE_KEYS = {
   x: "bin-generator-x",
   y: "bin-generator-y",
   h: "bin-generator-h",
+  wall: "bin-generator-wall",
   stl: "bin-generator-stl",
 };
 
-function saveDimensions(x, y, h) {
+function saveDimensions(x, y, h, wall) {
   try {
     localStorage.setItem(STORAGE_KEYS.x, String(x));
     localStorage.setItem(STORAGE_KEYS.y, String(y));
     localStorage.setItem(STORAGE_KEYS.h, String(h));
+    localStorage.setItem(STORAGE_KEYS.wall, String(wall));
   } catch (e) {
     console.warn("Failed to save dimensions to localStorage", e);
   }
@@ -123,8 +126,9 @@ function loadDimensions() {
   const x = localStorage.getItem(STORAGE_KEYS.x);
   const y = localStorage.getItem(STORAGE_KEYS.y);
   const h = localStorage.getItem(STORAGE_KEYS.h);
+  const wall = localStorage.getItem(STORAGE_KEYS.wall);
   if (x == null || y == null || h == null) return null;
-  return { x, y, h };
+  return { x, y, h, wall };
 }
 
 function arrayBufferToBase64(buffer) {
@@ -298,9 +302,10 @@ async function generateAndPreview() {
   const x = xEl.value;
   const y = yEl.value;
   const h = hEl.value;
+  const wall = wallEl.value;
   const ears = earsEl.checked;
   const useRamp = useRampEl?.checked ?? true;
-  const cacheKey = `bin-${x}-${y}-${h}-ears${ears}-ramp${useRamp}`;
+  const cacheKey = `bin-${x}-${y}-${h}-w${wall}-ears${ears}-ramp${useRamp}`;
 
   try {
     const cached = await getCached(cacheKey);
@@ -321,20 +326,22 @@ async function generateAndPreview() {
         y +
         "-" +
         h +
+        "-w" +
+        wall +
         "-ears" +
         (ears ? "1" : "0") +
         "-ramp" +
         (useRamp ? "1" : "0") +
         ".stl";
       downloadBtn.classList.remove("disabled");
-      saveDimensions(x, y, h);
+      saveDimensions(x, y, h, wall);
       saveStl(arrayBuffer);
       setStatus("Loaded from browser cache", "ok");
       generateBtn.disabled = false;
       return;
     }
 
-    const blob = await generateBin(baseUrl, x, y, h, ears, useRamp);
+    const blob = await generateBin(baseUrl, x, y, h, wall, ears, useRamp);
     await setCached(cacheKey, blob);
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -356,6 +363,8 @@ async function generateAndPreview() {
       y +
       "-" +
       h +
+      "-w" +
+      wall +
       "-ears" +
       (ears ? "1" : "0") +
       "-ramp" +
@@ -363,7 +372,7 @@ async function generateAndPreview() {
       ".stl";
     downloadBtn.classList.remove("disabled");
 
-    saveDimensions(x, y, h);
+    saveDimensions(x, y, h, wall);
     saveStl(arrayBuffer);
 
     setStatus("Model loaded.", "ok");
@@ -398,6 +407,7 @@ function restoreFromStorage() {
     xEl.value = dims.x;
     yEl.value = dims.y;
     hEl.value = dims.h;
+    if (dims.wall != null) wallEl.value = dims.wall;
   }
 
   const stlBuffer = loadStl();
@@ -410,7 +420,15 @@ function restoreFromStorage() {
       objectUrl = URL.createObjectURL(blob);
       downloadBtn.href = objectUrl;
       downloadBtn.download =
-        "bin-" + xEl.value + "-" + yEl.value + "-" + hEl.value + ".stl";
+        "bin-" +
+        xEl.value +
+        "-" +
+        yEl.value +
+        "-" +
+        hEl.value +
+        "-w" +
+        wallEl.value +
+        ".stl";
       downloadBtn.classList.remove("disabled");
       setStatus("Model loaded.", "ok");
       requestAnimationFrame(() => {
