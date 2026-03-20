@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "https://unpkg.com/three@0.160.0/examples/jsm/loaders/STLLoader.js";
 import { generateBin } from "./api.js";
-import { getCached, setCached } from "./cache.js";
+import { getCached, setCached, clearAllCached } from "./cache.js";
 
 const viewerEl = document.getElementById("viewer");
 const apiBaseEl = document.getElementById("apiBase");
@@ -18,21 +18,7 @@ function detectBackend() {
   return CLOUD_API;
 }
 
-function wakeBackend(baseUrl) {
-  const base = baseUrl.replace(/\/+$/, "");
-  fetch(`${base}/info`)
-    .then((r) => (r.ok ? r.json() : Promise.reject()))
-    .then((data) => {
-      if (data?.version) console.log(data.version);
-    })
-    .catch(() => {});
-}
-
 apiBaseEl.value = detectBackend();
-
-document.addEventListener("DOMContentLoaded", () => {
-  wakeBackend(apiBaseEl.value.trim().replace(/\/+$/, ""));
-});
 
 const xEl = document.getElementById("x");
 const yEl = document.getElementById("y");
@@ -132,6 +118,46 @@ const STORAGE_KEYS = {
   wall: "bin-generator-wall",
   stl: "bin-generator-stl",
 };
+
+const BACKEND_VERSION_KEY = "backend_version";
+/** @type {string | null} */
+let sessionBackendVersion = null;
+
+async function syncBackendVersion(baseUrl) {
+  sessionBackendVersion = null;
+  const base = baseUrl.replace(/\/+$/, "");
+  let version;
+  try {
+    const r = await fetch(`${base}/info`);
+    if (!r.ok) return;
+    const data = await r.json();
+    if (typeof data?.version !== "string" || !data.version) return;
+    version = data.version;
+  } catch {
+    return;
+  }
+
+  const prevVersion = localStorage.getItem(BACKEND_VERSION_KEY);
+  if (prevVersion !== version) {
+    try {
+      await clearAllCached();
+    } catch (e) {
+      console.warn("Failed to clear STL cache", e);
+    }
+    try {
+      localStorage.removeItem(STORAGE_KEYS.stl);
+    } catch (e) {
+      console.warn("Failed to remove STL from localStorage", e);
+    }
+    try {
+      localStorage.setItem(BACKEND_VERSION_KEY, version);
+    } catch (e) {
+      console.warn("Failed to save backend version", e);
+    }
+  }
+  sessionBackendVersion = version;
+  console.log(version);
+}
 
 function saveDimensions(x, y, h, wall) {
   try {
@@ -377,7 +403,13 @@ async function generateAndPreview() {
   const cacheKey = `bin-${x}-${y}-${h}-w${wall}-ears${ears}-ramp${useRamp}`;
 
   try {
-    const cached = await getCached(cacheKey);
+    let cached = null;
+    if (
+      sessionBackendVersion != null &&
+      localStorage.getItem(BACKEND_VERSION_KEY) === sessionBackendVersion
+    ) {
+      cached = await getCached(cacheKey);
+    }
     if (cached) {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(cached);
@@ -547,7 +579,14 @@ function preloadHowTo() {
 generateBtn.addEventListener("click", generateAndPreview);
 resetViewBtn.addEventListener("click", resetView);
 
-restoreFromStorage();
+document.addEventListener("DOMContentLoaded", () => {
+  void (async () => {
+    const base = apiBaseEl.value.trim().replace(/\/+$/, "");
+    await syncBackendVersion(base);
+    restoreFromStorage();
+    resize();
+  })();
+});
 window.addEventListener("resize", resize);
 resize();
 animate();
