@@ -361,48 +361,47 @@ button:disabled, a.button-link.disabled {
 }
 
 .site-footer {
-  margin-top: 10px;
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 8px 12px;
+  gap: 14px;
+  margin-top: 16px;
+  font-size: 0.8rem;
 }
 
-.site-footer-support-heading {
-  font-size: 13px;
-  color: var(--muted);
-  font-weight: 500;
-}
-
-.site-footer-paypal {
-  display: inline-block;
+/* Support button (subtle but intentional) */
+.support-button {
+  color: #9aa4b2;
+  text-decoration: none;
   padding: 4px 10px;
-  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--panel-2);
-  color: var(--text);
-  font-size: 12px;
-  line-height: 1.3;
-  text-decoration: none;
-  text-align: center;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.85;
 }
 
-.site-footer-paypal:hover {
-  background: #1f2430;
-  border-color: #3d4654;
+.support-button:hover {
+  color: #e6edf3;
+  background: rgba(255, 255, 255, 0.06);
+  opacity: 1;
 }
 
+/* kill ugly visited purple */
+.support-button:visited {
+  color: #9aa4b2;
+}
+
+/* Stats = even quieter */
 .site-footer-stats {
-  font-size: 11px;
-  color: #6b7684;
+  color: #6b7280;
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 .site-footer-stats:hover {
-  color: var(--muted);
-  text-decoration: underline;
+  color: #9aa4b2;
 }
 
 .status {
