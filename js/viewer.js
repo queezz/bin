@@ -42,6 +42,8 @@ let howtoMainCachedClone = null;
 
 let objectUrl = null;
 let currentMesh = null;
+let renderToken = 0;
+let userRenderToken = 0;
 let defaultCameraPosition = new THREE.Vector3(120, -120, 120);
 let defaultControlsTarget = new THREE.Vector3(0, 0, 0);
 
@@ -221,6 +223,41 @@ function setStatus(text, level) {
   if (level) statusEl.classList.add(level);
 }
 
+async function loadDemoSTL() {
+  try {
+    const res = await fetch("/assets/demo-bin-40-40-20-w1.2-ears0-ramp1.stl");
+    if (!res.ok) return null;
+    return await res.blob();
+  } catch (e) {
+    console.warn("Demo STL load failed", e);
+    return null;
+  }
+}
+
+/**
+ * @param {Blob} blob
+ * @param {number} token
+ * @param {string} downloadFilename
+ * @param {string | null} statusText
+ */
+async function renderSTL(blob, token, downloadFilename, statusText) {
+  if (token !== renderToken) return;
+  const arrayBuffer = await blob.arrayBuffer();
+  if (token !== renderToken) return;
+  const geometry = loader.parse(arrayBuffer);
+  if (token !== renderToken) return;
+  showGeometry(geometry);
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+  objectUrl = URL.createObjectURL(blob);
+  downloadBtn.href = objectUrl;
+  downloadBtn.download = downloadFilename;
+  downloadBtn.classList.remove("disabled");
+  if (statusText) setStatus(statusText, "ok");
+  requestAnimationFrame(() => {
+    if (currentMesh) fitCameraToObject(camera, currentMesh, controls);
+  });
+}
+
 function resize() {
   const width = viewerEl.clientWidth;
   const height = viewerEl.clientHeight;
@@ -389,6 +426,9 @@ function resetView() {
 }
 
 async function generateAndPreview() {
+  const token = ++renderToken;
+  userRenderToken = token;
+
   generateBtn.disabled = true;
   downloadBtn.classList.add("disabled");
   setStatus("Generating STL...", "warn");
@@ -410,10 +450,12 @@ async function generateAndPreview() {
     ) {
       cached = await getCached(cacheKey);
     }
+    if (token !== renderToken) return;
     if (cached) {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(cached);
       const arrayBuffer = await cached.arrayBuffer();
+      if (token !== renderToken) return;
       const geometry = loader.parse(arrayBuffer);
       showGeometry(geometry);
       requestAnimationFrame(() => {
@@ -442,6 +484,8 @@ async function generateAndPreview() {
       return;
     }
 
+    if (token !== renderToken) return;
+
     let blob;
     try {
       blob = await generateBin(baseUrl, x, y, h, wall, ears, useRamp);
@@ -459,12 +503,17 @@ async function generateAndPreview() {
       }
       return;
     }
+    if (token !== renderToken) return;
+
     await setCached(cacheKey, blob);
+
+    if (token !== renderToken) return;
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(blob);
 
     const arrayBuffer = await blob.arrayBuffer();
+    if (token !== renderToken) return;
     const geometry = loader.parse(arrayBuffer);
     showGeometry(geometry);
 
@@ -521,7 +570,9 @@ fitViewBtn.addEventListener("click", () => {
   }
 });
 
-function restoreFromStorage() {
+async function restoreFromStorage() {
+  const token = ++renderToken;
+
   const dims = loadDimensions();
   if (dims) {
     xEl.value = dims.x;
@@ -533,13 +584,12 @@ function restoreFromStorage() {
   const stlBuffer = loadStl();
   if (stlBuffer) {
     try {
-      const geometry = loader.parse(stlBuffer);
-      showGeometry(geometry);
+      if (token !== renderToken) return;
+      if (userRenderToken > token) return;
+      if (userRenderToken > 0 && token > userRenderToken) return;
+
       const blob = new Blob([stlBuffer], { type: "application/octet-stream" });
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(blob);
-      downloadBtn.href = objectUrl;
-      downloadBtn.download =
+      const downloadFilename =
         "bin-" +
         xEl.value +
         "-" +
@@ -549,11 +599,7 @@ function restoreFromStorage() {
         "-w" +
         wallEl.value +
         ".stl";
-      downloadBtn.classList.remove("disabled");
-      setStatus("Model loaded.", "ok");
-      requestAnimationFrame(() => {
-        if (currentMesh) fitCameraToObject(camera, currentMesh, controls);
-      });
+      await renderSTL(blob, token, downloadFilename, "Model loaded.");
     } catch (e) {
       console.warn("Failed to restore STL from localStorage", e);
     }
@@ -581,9 +627,23 @@ resetViewBtn.addEventListener("click", resetView);
 
 document.addEventListener("DOMContentLoaded", () => {
   void (async () => {
+    const token = ++renderToken;
+    const demo = await loadDemoSTL();
+    if (!demo) return;
+    if (token !== renderToken) return;
+    if (userRenderToken > token) return;
+    await renderSTL(
+      demo,
+      token,
+      "demo-bin-40-40-20-w1.2-ears0-ramp1.stl",
+      null
+    );
+  })();
+
+  void (async () => {
     const base = apiBaseEl.value.trim().replace(/\/+$/, "");
     await syncBackendVersion(base);
-    restoreFromStorage();
+    await restoreFromStorage();
     resize();
   })();
 });
