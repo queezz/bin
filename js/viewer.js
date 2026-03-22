@@ -223,9 +223,47 @@ function setStatus(text, level) {
   if (level) statusEl.classList.add(level);
 }
 
+const DEMO_FILENAME = "demo-bin-40-40-20-w1.2-ears0-ramp1.stl";
+
+function parseDemoParams(filename) {
+  try {
+    const name = filename.replace(".stl", "");
+
+    const match = name.match(
+      /bin-(\d+)-(\d+)-(\d+)-w([\d.]+)-ears(\d)-ramp(\d)/
+    );
+
+    if (!match) return null;
+
+    return {
+      x: parseFloat(match[1]),
+      y: parseFloat(match[2]),
+      h: parseFloat(match[3]),
+      wall: parseFloat(match[4]),
+      ears: match[5] === "1",
+      ramp: match[6] === "1",
+    };
+  } catch (e) {
+    console.warn("Failed to parse demo params", e);
+    return null;
+  }
+}
+
+function applyParamsToUI(p) {
+  if (!p) return;
+
+  document.querySelector("#x").value = String(p.x);
+  document.querySelector("#y").value = String(p.y);
+  document.querySelector("#h").value = String(p.h);
+  document.querySelector("#wall").value = String(p.wall);
+
+  document.querySelector("#ears").checked = p.ears;
+  document.querySelector("#useRamp").checked = p.ramp;
+}
+
 async function loadDemoSTL() {
   try {
-    const res = await fetch("/assets/demo-bin-40-40-20-w1.2-ears0-ramp1.stl");
+    const res = await fetch(`/assets/${DEMO_FILENAME}`);
     if (!res.ok) return null;
     return await res.blob();
   } catch (e) {
@@ -626,18 +664,16 @@ generateBtn.addEventListener("click", generateAndPreview);
 resetViewBtn.addEventListener("click", resetView);
 
 document.addEventListener("DOMContentLoaded", () => {
+  const demoParams = parseDemoParams(DEMO_FILENAME);
+  applyParamsToUI(demoParams);
+
   void (async () => {
     const token = ++renderToken;
     const demo = await loadDemoSTL();
     if (!demo) return;
     if (token !== renderToken) return;
     if (userRenderToken > token) return;
-    await renderSTL(
-      demo,
-      token,
-      "demo-bin-40-40-20-w1.2-ears0-ramp1.stl",
-      null
-    );
+    await renderSTL(demo, token, DEMO_FILENAME, null);
   })();
 
   void (async () => {
