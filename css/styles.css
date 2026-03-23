@@ -472,3 +472,28 @@ button:disabled, a.button-link.disabled {
     font-size: 14px;
   }
 }
+
+
+.howto-hero {
+  text-align: center;
+  margin: 16px 0 24px;
+}
+
+.howto-hero img {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  border-radius: 8px;
+}
+
+.howto-section-img {
+  text-align: center;
+  margin: 12px 0 20px;
+}
+
+.howto-section-img img {
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  border-radius: 8px;
+}

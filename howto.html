@@ -18,73 +18,111 @@
     </header>
 
     <main class="howto-content">
-      <h1>How to use Beanbins</h1>
-
       <div class="info-card primary">
-        <ol class="howto-steps">
-          <li><strong>Set dimensions</strong> — Enter X, Y, and H in mm.</li>
-          <li><strong>Click Generate</strong> — The 3D model will be created.</li>
-          <li><strong>Download STL and slice</strong> — Download the file and open it in your slicer.</li>
-        </ol>
+        <strong>Need a bin right now, exactly to size?</strong><br>
+        Generate it and print.
       </div>
+
+      <div class="howto-hero">
+        <img src="./assets/beanbins.png" alt="Parametric 3D printable bins generated with BeanBins" />
+      </div>      
+
+
       <p class="howto-hint">
         First generation may take a few seconds if the server is starting up. After that, it's fast.
       </p>
 
       <h2 class="howto-section">Model details</h2>
 
+      <div class="howto-section-img">
+        <img src="./assets/beanbins-stack.png" alt="Stack of BeanBins bins" />
+      </div>
+      
+      <h3>Core features</h3>
       <ul class="howto-steps">
         <li>
-          <strong>Wall thickness</strong> — Fixed at 1.2 mm.
-          Works well for both 0.4 mm and 0.6 mm nozzles.
+          <strong>Wall thickness</strong> — Adjustable from 0.4 mm to 2.99 mm. <br>
+          Thin walls (0.8–1.2 mm) work well for small bins and fast prints. <br>
+          Larger bins benefit from thicker walls (1.6–1.8 mm+).
         </li>
       
         <li>
-          <strong>Design focus</strong> — Optimized for fast printing with 0.6 mm nozzles.
-          Tested on Voron and Bambu A1 mini.
+          <strong>Stackable design</strong> — Optional stacking geometry allows bins to sit securely on top of each other.
         </li>
       
         <li>
-          <strong>Print behavior</strong> — 
-          <ul>
-            <li>Seam artifacts may appear if tuning is off</li>
-            <li>Vase mode: very clean results</li>
-            <li>Well-tuned printers: reliable in both modes</li>
-          </ul>
-        </li>
-      
-        <li>
-          <strong>Vase mode recommendation</strong> —
-          0.6 mm nozzle, 0.3 mm layer height,
-          1.0–1.2 mm line width.
-        </li>
-      
-        <li>
-          <strong>Size limits</strong> — <br>
-          Minimum: 15 mm<br>
-          Maximum: 300 mm
-        </li>
-      
-        <li>
-          <strong>Connectors ("ears")</strong> — 
-          Work in progress, optimizing for the vase mode. Geometry will change.
-          Future versions will support bin-to-bin connections.
-        </li>
-      
-        <li>
-          <strong>Future improvements</strong> —
-          <ul>
-            <li>Improved wall structure (stronger than plain walls)</li>
-            <li>Better vase-mode compatibility</li>
-            <li>Optional grid system</li>
-          </ul>
-        </li>
-      
-        <li>
-          <strong>Goal</strong> — 
-          Quickly generate simple, printable bins to exact size.
+          <strong>Precise sizing</strong> — Fractional millimeter input supported. Useful for tight fits (e.g. drawer dividers).
         </li>
       </ul>
+      
+      <h3>Printing behavior</h3>
+      <ul class="howto-steps">
+        <li>
+          <strong>Optimized for fast printing</strong> — Works especially well with 0.6 mm and 1.0 mm nozzles.
+        </li>
+      
+        <li>
+          <strong>Vase mode</strong> — 
+          Clean, seamless bins with no visible seam artifacts.
+          Recommended for aesthetic use (kitchen, desk).
+        </li>
+      
+        <li>
+          <strong>Suggested setups</strong> —
+          <ul>
+            <li>0.6 mm nozzle → ~1.2 mm line width (small bins)</li>
+            <li>1.0 mm nozzle → ~1.6–1.8 mm line width (large bins)</li>
+          </ul>
+        </li>
+      
+        <li>
+          Larger bins (> ~50 mm) may feel flexible with thin walls — increase line width or wall thickness.
+        </li>
+      </ul>
+      
+      <h3>Limitations / work in progress</h3>
+      <ul class="howto-steps">
+        <li>
+          <strong>Connectors ("ears")</strong> — Experimental feature. <br>
+          Currently best suited for small bins and standard (non-vase) printing. <br>
+          Disabled by default and may change in future versions.
+        </li>
+      
+        <li>
+          <strong>Wall thickness limit</strong> — Currently capped at 2.99 mm due to geometry constraints. <br>
+          Thicker walls will be supported in future revisions.
+        </li>
+      </ul>
+      
+      <h3>Why this tool exists</h3>
+      <ul class="howto-steps">
+        <li>
+          <strong>One bin. Exact size. Right now.</strong>
+        </li>
+      
+        <li>
+          Designed for situations where full systems (like Gridfinity) are overkill.
+        </li>
+      
+        <li>
+          Examples:
+          <ul>
+            <li>Keep spice jars from sliding on a shelf</li>
+            <li>Quick drawer dividers</li>
+            <li>Simple storage without planning a full grid</li>
+          </ul>
+        </li>
+      
+        <li>
+          <strong>Faster than system-based solutions</strong> — no base plates, less material, shorter prints.
+        </li>
+      
+        <li>
+          <strong>Cleaner look</strong> — vase mode avoids visible seams for everyday spaces.
+        </li>
+      </ul>
+
+
 
 
       <div class="info-card">
