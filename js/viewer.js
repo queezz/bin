@@ -113,6 +113,17 @@ scene.add(grid);
 
 const loader = new STLLoader();
 
+const VIEWER_LOG = "[viewer]";
+
+/**
+ * @param {string} step
+ * @param {string} [detail]
+ */
+function vlog(step, detail) {
+  if (detail !== undefined) console.log(`${VIEWER_LOG} ${step}`, detail);
+  else console.log(`${VIEWER_LOG} ${step}`);
+}
+
 const STORAGE_KEYS = {
   x: "bin-generator-x",
   y: "bin-generator-y",
@@ -158,7 +169,7 @@ async function syncBackendVersion(baseUrl) {
     }
   }
   sessionBackendVersion = version;
-  console.log(version);
+  vlog("sync", `backend version ${version}`);
 }
 
 function saveDimensions(x, y, h, wall) {
@@ -261,15 +272,46 @@ function applyParamsToUI(p) {
   document.querySelector("#useRamp").checked = p.ramp;
 }
 
-async function loadDemoSTL() {
-  try {
-    const res = await fetch(`./assets/${DEMO_FILENAME}`);
-    if (!res.ok) return null;
-    return await res.blob();
-  } catch (e) {
-    console.warn("Demo STL load failed", e);
-    return null;
+/**
+ * @param {ArrayBuffer} ab
+ * @returns {boolean}
+ */
+function isValidStlArrayBuffer(ab) {
+  if (!ab || ab.byteLength < 84) return false;
+  const head = new Uint8Array(ab, 0, Math.min(5, ab.byteLength));
+  const prefix = String.fromCharCode(...head).toLowerCase();
+  if (prefix.startsWith("solid")) return ab.byteLength > 80;
+  const view = new DataView(ab);
+  const triCount = view.getUint32(80, true);
+  return triCount > 0 && 84 + triCount * 50 === ab.byteLength;
+}
+
+/**
+ * @param {number} maxAttempts
+ * @returns {Promise<Blob | null>}
+ */
+async function fetchDemoBlobWithRetries(maxAttempts) {
+  const url = `./assets/${DEMO_FILENAME}`;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      vlog("fetch", `demo STL attempt ${attempt}/${maxAttempts}`);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      if (!blob || blob.size === 0) throw new Error("empty blob");
+      vlog("fetch", "demo STL ok");
+      return blob;
+    } catch (e) {
+      lastErr = e;
+      console.error("[FETCH_FAIL] demo STL", { attempt, maxAttempts, err: e });
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    }
   }
+  if (lastErr) console.error("[FETCH_FAIL] demo STL exhausted retries", lastErr);
+  return null;
 }
 
 /**
@@ -280,20 +322,34 @@ async function loadDemoSTL() {
  */
 async function renderSTL(blob, token, downloadFilename, statusText) {
   if (token !== renderToken) return;
-  const arrayBuffer = await blob.arrayBuffer();
-  if (token !== renderToken) return;
-  const geometry = loader.parse(arrayBuffer);
-  if (token !== renderToken) return;
-  showGeometry(geometry);
-  if (objectUrl) URL.revokeObjectURL(objectUrl);
-  objectUrl = URL.createObjectURL(blob);
-  downloadBtn.href = objectUrl;
-  downloadBtn.download = downloadFilename;
-  downloadBtn.classList.remove("disabled");
-  if (statusText) setStatus(statusText, "ok");
-  requestAnimationFrame(() => {
-    if (currentMesh) fitCameraToObject(camera, currentMesh, controls);
-  });
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+    if (token !== renderToken) return;
+    const geometry = loader.parse(arrayBuffer);
+    if (token !== renderToken) return;
+    showGeometry(geometry);
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(blob);
+    downloadBtn.href = objectUrl;
+    downloadBtn.download = downloadFilename;
+    downloadBtn.classList.remove("disabled");
+    if (statusText) setStatus(statusText, "ok");
+    requestAnimationFrame(() => {
+      if (currentMesh) fitCameraToObject(camera, currentMesh, controls);
+    });
+  } catch (e) {
+    console.error("[LOAD_FAIL] STL parse or render", e);
+    throw e;
+  }
+}
+
+function disposeCurrentMesh() {
+  if (currentMesh) {
+    scene.remove(currentMesh);
+    currentMesh.geometry.dispose();
+    currentMesh.material.dispose();
+    currentMesh = null;
+  }
 }
 
 function resize() {
@@ -421,12 +477,7 @@ function fitCameraToObject(camera, object, controls, offset) {
 }
 
 function showGeometry(geometry) {
-  if (currentMesh) {
-    scene.remove(currentMesh);
-    currentMesh.geometry.dispose();
-    currentMesh.material.dispose();
-    currentMesh = null;
-  }
+  disposeCurrentMesh();
 
   geometry.computeVertexNormals();
 
@@ -608,8 +659,23 @@ fitViewBtn.addEventListener("click", () => {
   }
 });
 
-async function restoreFromStorage() {
+/**
+ * Single startup path: sync version → optional validated localStorage STL → else demo fetch (retries).
+ * Must not run in parallel with any other STL load.
+ */
+async function runInitialStartupSequence() {
   const token = ++renderToken;
+  vlog("init", "viewer ready, begin startup sequence");
+  disposeCurrentMesh();
+
+  const base = apiBaseEl.value.trim().replace(/\/+$/, "");
+  resize();
+  await new Promise((r) => requestAnimationFrame(r));
+  await syncBackendVersion(base);
+  if (token !== renderToken) {
+    vlog("init", "aborted (superseded)");
+    return;
+  }
 
   const dims = loadDimensions();
   if (dims) {
@@ -620,27 +686,67 @@ async function restoreFromStorage() {
   }
 
   const stlBuffer = loadStl();
-  if (stlBuffer) {
+  if (stlBuffer && isValidStlArrayBuffer(stlBuffer)) {
+    vlog("cache", "using validated localStorage STL");
+    const blob = new Blob([stlBuffer], { type: "application/octet-stream" });
+    const downloadFilename =
+      "bin-" +
+      xEl.value +
+      "-" +
+      yEl.value +
+      "-" +
+      hEl.value +
+      "-w" +
+      wallEl.value +
+      ".stl";
     try {
-      if (token !== renderToken) return;
-      if (userRenderToken > token) return;
-      if (userRenderToken > 0 && token > userRenderToken) return;
-
-      const blob = new Blob([stlBuffer], { type: "application/octet-stream" });
-      const downloadFilename =
-        "bin-" +
-        xEl.value +
-        "-" +
-        yEl.value +
-        "-" +
-        hEl.value +
-        "-w" +
-        wallEl.value +
-        ".stl";
       await renderSTL(blob, token, downloadFilename, "Model loaded.");
+      vlog("render", "done (cache)");
+      return;
     } catch (e) {
-      console.warn("Failed to restore STL from localStorage", e);
+      console.error("[CACHE_FAIL] stored STL failed to parse; falling back to demo", e);
+      try {
+        localStorage.removeItem(STORAGE_KEYS.stl);
+      } catch (err) {
+        console.warn("Failed to remove bad STL from localStorage", err);
+      }
+      disposeCurrentMesh();
     }
+  } else {
+    if (stlBuffer) {
+      console.error("[CACHE_FAIL] invalid or corrupt STL in localStorage (size/structure)");
+      try {
+        localStorage.removeItem(STORAGE_KEYS.stl);
+      } catch (e) {
+        console.warn("Failed to remove invalid STL from localStorage", e);
+      }
+    } else {
+      vlog("cache", "no localStorage STL");
+    }
+  }
+
+  if (token !== renderToken) {
+    vlog("init", "aborted before demo fetch");
+    return;
+  }
+
+  vlog("fetch", "loading demo STL");
+  const demoBlob = await fetchDemoBlobWithRetries(2);
+  if (!demoBlob) {
+    setStatus("Could not load demo model.", "error");
+    return;
+  }
+  if (token !== renderToken) {
+    vlog("init", "aborted after demo fetch");
+    return;
+  }
+
+  try {
+    await renderSTL(demoBlob, token, DEMO_FILENAME, "Model loaded.");
+    vlog("render", "done (demo)");
+  } catch (e) {
+    console.error("[LOAD_FAIL] demo STL", e);
+    setStatus("Could not display demo model.", "error");
   }
 }
 
@@ -668,18 +774,12 @@ document.addEventListener("DOMContentLoaded", () => {
   applyParamsToUI(demoParams);
 
   void (async () => {
-    const token = ++renderToken;
-    const demo = await loadDemoSTL();
-    if (!demo) return;
-    if (token !== renderToken) return;
-    if (userRenderToken > token) return;
-    await renderSTL(demo, token, DEMO_FILENAME, null);
-  })();
-
-  void (async () => {
-    const base = apiBaseEl.value.trim().replace(/\/+$/, "");
-    await syncBackendVersion(base);
-    await restoreFromStorage();
+    try {
+      await runInitialStartupSequence();
+    } catch (e) {
+      console.error("[LOAD_FAIL] startup sequence", e);
+      setStatus("Could not load model.", "error");
+    }
     resize();
   })();
 });
