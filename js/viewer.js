@@ -263,7 +263,7 @@ function applyParamsToUI(p) {
 
 async function loadDemoSTL() {
   try {
-    const res = await fetch(`/assets/${DEMO_FILENAME}`);
+    const res = await fetch(`./assets/${DEMO_FILENAME}`);
     if (!res.ok) return null;
     return await res.blob();
   } catch (e) {
