@@ -120,8 +120,38 @@ const VIEWER_LOG = "[viewer]";
  * @param {string} [detail]
  */
 function vlog(step, detail) {
-  if (detail !== undefined) console.log(`${VIEWER_LOG} ${step}`, detail);
-  else console.log(`${VIEWER_LOG} ${step}`);
+  const ms = Math.round(performance.now());
+  const tag = `${VIEWER_LOG}[+${ms}ms]`;
+  if (detail !== undefined) console.log(`${tag} ${step}`, detail);
+  else console.log(`${tag} ${step}`);
+}
+
+/** Snapshot of inputs after DOMContentLoaded applies demo + saved dimensions (for version reconcile guard). */
+let initialReconcileSnapshot = null;
+
+function snapshotInputs() {
+  return {
+    x: xEl.value,
+    y: yEl.value,
+    h: hEl.value,
+    wall: wallEl.value,
+    ears: earsEl.checked,
+    ramp: useRampEl?.checked ?? true,
+  };
+}
+
+function userHasModifiedInputs() {
+  if (!initialReconcileSnapshot) return false;
+  const a = initialReconcileSnapshot;
+  const b = snapshotInputs();
+  return (
+    a.x !== b.x ||
+    a.y !== b.y ||
+    a.h !== b.h ||
+    a.wall !== b.wall ||
+    a.ears !== b.ears ||
+    a.ramp !== b.ramp
+  );
 }
 
 const STORAGE_KEYS = {
@@ -136,40 +166,24 @@ const BACKEND_VERSION_KEY = "backend_version";
 /** @type {string | null} */
 let sessionBackendVersion = null;
 
-async function syncBackendVersion(baseUrl) {
-  sessionBackendVersion = null;
+/** @type {Promise<void>} */
+let fastInitialRenderPromise;
+
+/**
+ * @param {string} baseUrl
+ * @returns {Promise<string | null>}
+ */
+async function fetchBackendVersion(baseUrl) {
   const base = baseUrl.replace(/\/+$/, "");
-  let version;
   try {
     const r = await fetch(`${base}/info`);
-    if (!r.ok) return;
+    if (!r.ok) return null;
     const data = await r.json();
-    if (typeof data?.version !== "string" || !data.version) return;
-    version = data.version;
+    if (typeof data?.version !== "string" || !data.version) return null;
+    return data.version;
   } catch {
-    return;
+    return null;
   }
-
-  const prevVersion = localStorage.getItem(BACKEND_VERSION_KEY);
-  if (prevVersion !== version) {
-    try {
-      await clearAllCached();
-    } catch (e) {
-      console.warn("Failed to clear STL cache", e);
-    }
-    try {
-      localStorage.removeItem(STORAGE_KEYS.stl);
-    } catch (e) {
-      console.warn("Failed to remove STL from localStorage", e);
-    }
-    try {
-      localStorage.setItem(BACKEND_VERSION_KEY, version);
-    } catch (e) {
-      console.warn("Failed to save backend version", e);
-    }
-  }
-  sessionBackendVersion = version;
-  vlog("sync", `backend version ${version}`);
 }
 
 function saveDimensions(x, y, h, wall) {
@@ -660,93 +674,166 @@ fitViewBtn.addEventListener("click", () => {
 });
 
 /**
- * Single startup path: sync version → optional validated localStorage STL → else demo fetch (retries).
- * Must not run in parallel with any other STL load.
+ * Fast path: never waits on backend. Renders validated localStorage STL or demo asset.
+ * Reads STL from storage synchronously at start so a parallel version sync cannot clear it first.
  */
-async function runInitialStartupSequence() {
-  const token = ++renderToken;
-  vlog("init", "viewer ready, begin startup sequence");
-  disposeCurrentMesh();
+function runFastInitialRender() {
+  const run = async () => {
+    const token = ++renderToken;
+    vlog("init", "fast path start");
+    disposeCurrentMesh();
+    resize();
 
-  const base = apiBaseEl.value.trim().replace(/\/+$/, "");
-  resize();
-  await new Promise((r) => requestAnimationFrame(r));
-  await syncBackendVersion(base);
-  if (token !== renderToken) {
-    vlog("init", "aborted (superseded)");
-    return;
-  }
+    const stlBuffer = loadStl();
+    await new Promise((r) => requestAnimationFrame(r));
 
-  const dims = loadDimensions();
-  if (dims) {
-    xEl.value = dims.x;
-    yEl.value = dims.y;
-    hEl.value = dims.h;
-    if (dims.wall != null) wallEl.value = dims.wall;
-  }
-
-  const stlBuffer = loadStl();
-  if (stlBuffer && isValidStlArrayBuffer(stlBuffer)) {
-    vlog("cache", "using validated localStorage STL");
-    const blob = new Blob([stlBuffer], { type: "application/octet-stream" });
-    const downloadFilename =
-      "bin-" +
-      xEl.value +
-      "-" +
-      yEl.value +
-      "-" +
-      hEl.value +
-      "-w" +
-      wallEl.value +
-      ".stl";
-    try {
-      await renderSTL(blob, token, downloadFilename, "Model loaded.");
-      vlog("render", "done (cache)");
+    if (token !== renderToken) {
+      vlog("init", "fast path aborted (superseded)");
       return;
-    } catch (e) {
-      console.error("[CACHE_FAIL] stored STL failed to parse; falling back to demo", e);
-      try {
-        localStorage.removeItem(STORAGE_KEYS.stl);
-      } catch (err) {
-        console.warn("Failed to remove bad STL from localStorage", err);
-      }
-      disposeCurrentMesh();
     }
-  } else {
-    if (stlBuffer) {
-      console.error("[CACHE_FAIL] invalid or corrupt STL in localStorage (size/structure)");
+
+    if (stlBuffer && isValidStlArrayBuffer(stlBuffer)) {
+      vlog("cache", "cache hit (optimistic)");
+      const blob = new Blob([stlBuffer], { type: "application/octet-stream" });
+      const downloadFilename =
+        "bin-" +
+        xEl.value +
+        "-" +
+        yEl.value +
+        "-" +
+        hEl.value +
+        "-w" +
+        wallEl.value +
+        ".stl";
       try {
-        localStorage.removeItem(STORAGE_KEYS.stl);
+        await renderSTL(blob, token, downloadFilename, "Model loaded.");
+        vlog("render", "done (cache)");
+        return;
       } catch (e) {
-        console.warn("Failed to remove invalid STL from localStorage", e);
+        console.error("[CACHE_FAIL] stored STL failed to parse; falling back to demo", e);
+        try {
+          localStorage.removeItem(STORAGE_KEYS.stl);
+        } catch (err) {
+          console.warn("Failed to remove bad STL from localStorage", err);
+        }
+        disposeCurrentMesh();
       }
     } else {
-      vlog("cache", "no localStorage STL");
+      if (stlBuffer) {
+        console.error("[CACHE_FAIL] invalid or corrupt STL in localStorage (size/structure)");
+        try {
+          localStorage.removeItem(STORAGE_KEYS.stl);
+        } catch (e) {
+          console.warn("Failed to remove invalid STL from localStorage", e);
+        }
+      } else {
+        vlog("cache", "no localStorage STL");
+      }
     }
+
+    if (token !== renderToken) {
+      vlog("init", "fast path aborted before demo fetch");
+      return;
+    }
+
+    vlog("fetch", "loading demo STL (fast path)");
+    const demoBlob = await fetchDemoBlobWithRetries(2);
+    if (!demoBlob) {
+      setStatus("Could not load demo model.", "error");
+      return;
+    }
+    if (token !== renderToken) {
+      vlog("init", "fast path aborted after demo fetch");
+      return;
+    }
+
+    try {
+      await renderSTL(demoBlob, token, DEMO_FILENAME, "Model loaded.");
+      vlog("render", "done (demo)");
+    } catch (e) {
+      console.error("[LOAD_FAIL] demo STL", e);
+      setStatus("Could not display demo model.", "error");
+    }
+  };
+
+  fastInitialRenderPromise = run();
+  return fastInitialRenderPromise;
+}
+
+/**
+ * Fetches backend version in the background. On mismatch, may invalidate cache and re-render once.
+ * Waits for the fast path to finish before clearing storage so optimistic read stays valid.
+ */
+async function runBackgroundVersionSync() {
+  const base = apiBaseEl.value.trim().replace(/\/+$/, "");
+  const version = await fetchBackendVersion(base);
+  vlog("sync", "version sync complete");
+
+  if (!version) {
+    return;
   }
 
-  if (token !== renderToken) {
-    vlog("init", "aborted before demo fetch");
+  const prevStored = localStorage.getItem(BACKEND_VERSION_KEY);
+  if (prevStored === version) {
+    sessionBackendVersion = version;
+    vlog("sync", `matched stored version ${version}`);
     return;
   }
 
-  vlog("fetch", "loading demo STL");
-  const demoBlob = await fetchDemoBlobWithRetries(2);
-  if (!demoBlob) {
-    setStatus("Could not load demo model.", "error");
+  sessionBackendVersion = version;
+
+  await fastInitialRenderPromise;
+
+  if (userHasModifiedInputs()) {
+    vlog("sync", "version changed; user modified inputs — skip reconcile");
     return;
   }
-  if (token !== renderToken) {
-    vlog("init", "aborted after demo fetch");
+
+  if (userRenderToken !== 0) {
+    vlog("sync", "version changed; user already generated — skip reconcile");
     return;
   }
+
+  vlog("sync", `version changed (${prevStored ?? "none"} → ${version}); reconciling`);
 
   try {
-    await renderSTL(demoBlob, token, DEMO_FILENAME, "Model loaded.");
-    vlog("render", "done (demo)");
+    await clearAllCached();
   } catch (e) {
-    console.error("[LOAD_FAIL] demo STL", e);
-    setStatus("Could not display demo model.", "error");
+    console.warn("Failed to clear STL cache", e);
+  }
+  try {
+    localStorage.removeItem(STORAGE_KEYS.stl);
+  } catch (e) {
+    console.warn("Failed to remove STL from localStorage", e);
+  }
+  try {
+    localStorage.setItem(BACKEND_VERSION_KEY, version);
+  } catch (e) {
+    console.warn("Failed to save backend version", e);
+  }
+
+  const demoParams = parseDemoParams(DEMO_FILENAME);
+  applyParamsToUI(demoParams);
+
+  const token = ++renderToken;
+  if (userRenderToken !== 0) {
+    vlog("sync", "reconcile aborted (user generated during clear)");
+    return;
+  }
+
+  const demoBlob = await fetchDemoBlobWithRetries(2);
+  if (!demoBlob) {
+    setStatus("Could not reload model after update.", "error");
+    return;
+  }
+  if (token !== renderToken) return;
+
+  try {
+    await renderSTL(demoBlob, token, DEMO_FILENAME, "Model updated.");
+    vlog("render", "done (version reconcile)");
+  } catch (e) {
+    console.error("[LOAD_FAIL] version reconcile demo", e);
+    setStatus("Could not display updated demo model.", "error");
   }
 }
 
@@ -773,15 +860,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const demoParams = parseDemoParams(DEMO_FILENAME);
   applyParamsToUI(demoParams);
 
-  void (async () => {
-    try {
-      await runInitialStartupSequence();
-    } catch (e) {
-      console.error("[LOAD_FAIL] startup sequence", e);
-      setStatus("Could not load model.", "error");
-    }
-    resize();
-  })();
+  const dims = loadDimensions();
+  if (dims) {
+    xEl.value = dims.x;
+    yEl.value = dims.y;
+    hEl.value = dims.h;
+    if (dims.wall != null) wallEl.value = dims.wall;
+  }
+
+  initialReconcileSnapshot = snapshotInputs();
+
+  void runFastInitialRender().catch((e) => {
+    console.error("[LOAD_FAIL] fast initial render", e);
+    setStatus("Could not load model.", "error");
+  });
+  void runBackgroundVersionSync().catch((e) => {
+    console.error("[LOAD_FAIL] background version sync", e);
+  });
+  resize();
 });
 window.addEventListener("resize", resize);
 resize();
