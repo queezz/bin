@@ -206,6 +206,39 @@ body {
   flex: 1 1 100%;
 }
 
+.dimensions-row--xyz {
+  flex-wrap: nowrap;
+}
+
+.dimensions-row--secondary {
+  flex-wrap: wrap;
+  gap: 10px 12px;
+}
+
+/* Wall with other inputs on the left; checkboxes on the right (all breakpoints) */
+.dimensions-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.dimensions-wall-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: text;
+}
+
+.dimensions-wall-label input {
+  cursor: text;
+}
+
 .field.checkbox {
   display: inline-flex;
   align-items: center;
@@ -233,7 +266,8 @@ body {
   cursor: text;
 }
 
-.dimensions-row input[type="number"] {
+.dimensions-row input[type="number"],
+.dimensions-wall-label input[type="number"] {
   width: 4.5em;
   min-width: 56px;
 }
@@ -465,8 +499,31 @@ button:disabled, a.button-link.disabled {
 .status.error { color: var(--danger); }
 
 @media (max-width: 640px) {
-  .dimensions-row {
+  .dimensions-row--xyz {
     gap: 10px;
+  }
+
+  .dimensions-row--secondary {
+    gap: 8px 10px;
+  }
+
+  .dimensions-checkboxes {
+    gap: 8px 12px;
+  }
+
+  /* Let X/Y/H shrink slightly so the row stays single-line on narrow phones */
+  .dimensions-row--xyz input[type="number"] {
+    min-width: 52px;
+    width: 4em;
+    padding: 7px 8px;
+    font-size: 14px;
+  }
+
+  .dimensions-wall-label input[type="number"] {
+    min-width: 52px;
+    width: 4em;
+    padding: 7px 8px;
+    font-size: 14px;
   }
 }
 
@@ -488,11 +545,13 @@ button:disabled, a.button-link.disabled {
     font-size: 15px;
   }
 
-  .dimensions-row label {
+  .dimensions-row label,
+  .dimensions-wall-label {
     font-size: 16px;
   }
 
-  .dimensions-row input[type="number"] {
+  .dimensions-row input[type="number"],
+  .dimensions-wall-label input[type="number"] {
     padding: 10px 12px;
     font-size: 17px;
     min-width: 60px;
