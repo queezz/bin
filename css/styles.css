@@ -360,6 +360,52 @@ button:disabled, a.button-link.disabled {
   color: var(--muted);
 }
 
+/* Short about (SEO / crawlers); hidden with #app-ui when How to is open */
+.site-about {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.site-about-heading {
+  margin: 0 0 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.site-about-text {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted);
+  opacity: 0.92;
+}
+
+.site-about-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-about-points li {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  color: var(--muted);
+  opacity: 0.85;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .site-footer {
   display: flex;
   justify-content: center;
