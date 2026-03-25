@@ -394,7 +394,7 @@ button:disabled, a.button-link.disabled {
   color: var(--muted);
 }
 
-/* Short about (SEO / crawlers); hidden with #app-ui when How to is open */
+/* Short about (SEO / crawlers); hidden with #app-ui when About is open */
 .site-about {
   margin-top: 14px;
   padding: 10px 12px;
