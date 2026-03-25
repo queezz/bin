@@ -440,6 +440,24 @@ button:disabled, a.button-link.disabled {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.site-about-links {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.site-about-links a:any-link {
+  color: #6b7280;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.site-about-links a:any-link:hover,
+.site-about-links a:any-link:focus-visible {
+  color: #9aa4b2;
+}
+
 .site-footer {
   display: flex;
   justify-content: center;
